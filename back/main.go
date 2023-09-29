@@ -1,53 +1,44 @@
 package main
 
 import (
-    "fmt"
-    "log"
-    "net/http"
+	"log"
+	"net/http"
 
-    "github.com/gorilla/websocket"
+	"github.com/sliseev/websocket_service/back/pkg/ws"
 )
 
-var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
-    CheckOrigin: func(r *http.Request) bool { return true },
-}
+func serveWs(controller *ws.Controller, w http.ResponseWriter, r *http.Request) {
+	conn, err := ws.Upgrade(w, r)
+	if err != nil {
+		log.Printf("serveWs: %v", err)
+		return
+	}
 
-func reader(conn *websocket.Conn) {
-    for {
-        messageType, p, err := conn.ReadMessage()
-        if err != nil {
-            log.Println(err)
-            return
-        }
-        fmt.Println(string(p))
-        if err := conn.WriteMessage(messageType, p); err != nil {
-            log.Println(err)
-            return
-        }
-    }
-}
+	client := &ws.Client{
+		Conn:       conn,
+		Controller: controller,
+	}
 
-func serveWs(w http.ResponseWriter, r *http.Request) {
-    fmt.Println(r.Host)
-    ws, err := upgrader.Upgrade(w, r, nil)
-    if err != nil {
-        log.Println(err)
-    }
-    reader(ws)
+	if err := client.ReadName(); err != nil {
+		log.Printf("serveWs: read name failed: %v", err)
+		return
+	}
+
+	controller.Register <- client
+	client.ProcessMessages()
 }
 
 func setupRoutes() {
-    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        fmt.Fprintf(w, "Simple Server")
-    })
-    http.HandleFunc("/ws", serveWs)
+	controller := ws.NewController()
+	go controller.Run()
+
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(controller, w, r)
+	})
 }
 
 func main() {
-    fmt.Println("Chat App v0.01")
-    setupRoutes()
-    http.ListenAndServe(":8080", nil)
+	log.Println("Chat App v0.01")
+	setupRoutes()
+	http.ListenAndServe(":8080", nil)
 }
-
