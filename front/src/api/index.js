@@ -1,14 +1,10 @@
 var socket = new WebSocket("ws://localhost:8080/ws");
 
-const Names = ["Sergey", "Ivan", "Vitaly", "Oleg", "Daniel", "Anna", "Nina", "Oxana", "Alex", "Bot"];
-
 let connect = cb => {
   console.log("connecting...");
 
   socket.onopen = () => {
     console.log("Successfully Connected");
-    var name = Names[Math.floor(Math.random() * Names.length)];
-    socket.send(name);
   };
 
   socket.onmessage = msg => {

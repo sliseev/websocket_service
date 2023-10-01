@@ -16,23 +16,27 @@ class App extends Component {
     connect((msg) => {
       console.log("New Message")
       this.setState(prevState => ({
-        chatHistory: [...this.state.chatHistory, msg]
+        chatHistory: [...prevState.chatHistory, msg]
       }))
       console.log(this.state);
     });
   }
   send(event) {
-    if(event.keyCode === 13) {
+    if(event.keyCode === 13 && event.target.value.length > 0) {
       sendMsg(event.target.value);
       event.target.value = "";
     }
   }
   render() {
+    var ph = "Type your name and press Enter to login"
+    if (this.state.chatHistory.length > 0) {
+      ph = "Type message and press Enter"
+    }
     return (
       <div className="App">
         <Header />
         <ChatHistory chatHistory={this.state.chatHistory} />
-        <ChatInput send={this.send} />
+        <ChatInput send={this.send} placeholder={ph} />
       </div>
     );
   }
